@@ -1,244 +1,530 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>上海工具厂价格查询系统</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; }
-        .glass-card { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* 还原截图中的 Logo 容器样式 */
-        .fixed-logo-container { 
-            width: 48px; 
-            height: 48px; 
-            background: #ffffff; 
-            border: 1.5px solid #e5e7eb; 
-            border-radius: 10px; 
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            flex-shrink: 0;
-        }
+  <meta charset="UTF-8" />
+  <title>上海工具厂价格查询系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        .upload-zone { border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
-        .upload-zone:hover { border-color: #3b82f6; background: #eff6ff; }
-    </style>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PapaParse CSV 解析库 -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(1200px circle at 12% 8%, rgba(59, 130, 246, 0.10), transparent 55%),
+        radial-gradient(900px circle at 88% 18%, rgba(16, 185, 129, 0.10), transparent 55%),
+        radial-gradient(700px circle at 70% 90%, rgba(99, 102, 241, 0.10), transparent 55%),
+        linear-gradient(180deg, #f8fafc, #ffffff 35%, #f1f5f9);
+      background-attachment: fixed;
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.85);
+      box-shadow:
+        0 18px 60px rgba(15, 23, 42, 0.10),
+        0 2px 10px rgba(15, 23, 42, 0.04);
+    }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* 还原截图中的 Logo 容器样式 */
+    .fixed-logo-container { 
+      width: 48px; 
+      height: 48px; 
+      background: #ffffff; 
+      border: 1.5px solid #e5e7eb; 
+      border-radius: 10px; 
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      flex-shrink: 0;
+    }
+
+    .upload-zone { border: 2px dashed #cbd5e1; transition: all 0.3s ease; }
+    .upload-zone:hover { border-color: #3b82f6; background: #eff6ff; }
+
+    input, select, button { transition: box-shadow .18s ease, border-color .18s ease, background-color .18s ease, transform .18s ease; }
+    ::selection { background: rgba(59, 130, 246, 0.20); }
+  </style>
 </head>
-<body class="min-h-screen py-6 px-4">
-    <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="text-center mb-8 relative">
-            <h1 class="font-bold text-slate-800 leading-tight">
-                <span class="text-3xl block mb-1">上海工具厂</span>
-                <span class="text-xl block text-slate-600">产品价格查询系统</span>
-            </h1>
-            <p id="status-text" class="text-slate-400 mt-2 text-xs tracking-wide">正在连接数据中心...</p>
+<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+  <!-- 背景装饰层 -->
+  <div aria-hidden="true" class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-28 -left-20 h-72 w-72 rounded-full bg-blue-400/15 blur-3xl"></div>
+    <div class="absolute top-10 -right-24 h-80 w-80 rounded-full bg-emerald-400/15 blur-3xl"></div>
+    <div class="absolute -bottom-32 left-1/3 h-96 w-96 rounded-full bg-indigo-400/15 blur-3xl"></div>
+    <div class="absolute inset-0 opacity-[0.35]"
+      style="background-image: radial-gradient(rgba(148,163,184,0.22) 1px, transparent 1px); background-size: 18px 18px;">
+    </div>
+  </div>
+
+  <div class="relative z-10 max-w-4xl w-full mx-auto">
+    <!-- 顶部标题区 -->
+    <div class="flex items-center gap-4 mb-6 sm:mb-8 animate-fade-in">
+      <!-- 固定 Logo 容器 -->
+      <div class="fixed-logo-container">
+        <img
+          src="Logo.png"
+          alt="上海工具厂 Logo"
+          class="w-9 h-9 object-contain"
+        />
+      </div>
+
+      <div>
+        <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/70 border border-slate-200/70 shadow-sm mb-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+          <span class="text-xs font-medium text-slate-700">Shanghai Tool Works • Price Lookup</span>
         </div>
-
-        <div id="main-content" class="space-y-4">
-            
-            <!-- Import Section -->
-            <div id="importSection" class="hidden animate-fade-in">
-                <div class="glass-card p-8 rounded-2xl text-center upload-zone cursor-pointer" onclick="document.getElementById('fileInput').click()">
-                    <div class="text-4xl mb-3">📁</div>
-                    <h3 class="text-lg font-bold text-slate-700">未检测到本地数据文件</h3>
-                    <p class="text-sm text-slate-500 mb-4">请点击此处手动选择《新价格本.csv》</p>
-                    <input type="file" id="fileInput" class="hidden" accept=".csv">
-                    <span class="bg-blue-600 text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-blue-700 transition-colors">选择文件</span>
-                </div>
-            </div>
-
-            <!-- Search Area -->
-            <div id="searchArea" class="glass-card p-5 rounded-2xl shadow-sm space-y-4 hidden animate-fade-in">
-                <div>
-                    <div class="flex justify-between items-end mb-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase">品名模糊搜索</label>
-                        <button onclick="location.reload()" class="text-[10px] text-blue-500 hover:underline">重新加载文件</button>
-                    </div>
-                    <div class="relative">
-                        <input type="text" id="nameSearch" placeholder="输入关键字..." 
-                               class="w-full pl-4 pr-10 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div id="nameResults" class="mt-1 max-h-48 overflow-y-auto hidden border rounded-lg bg-white shadow-lg z-20 relative"></div>
-                </div>
-
-                <div id="specContainer" class="hidden animate-fade-in">
-                    <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">选择具体规格</label>
-                    <select id="specSelect" class="w-full p-3 rounded-xl border border-slate-200 bg-slate-50 outline-none">
-                    </select>
-                </div>
-
-                <div class="pt-2 border-t border-slate-100">
-                    <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">或输入 9 位品号</label>
-                    <input type="text" id="idSearch" placeholder="精确查找..." 
-                           class="w-full pl-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-green-500 outline-none">
-                </div>
-            </div>
-
-            <!-- Result Display -->
-            <div id="resultCard" class="hidden animate-fade-in">
-                <div class="bg-white border border-slate-100 rounded-2xl shadow-xl overflow-hidden">
-                    <div class="bg-[#4a5568] px-4 py-2 flex justify-between items-center">
-                        <span class="text-white text-[10px] font-bold tracking-widest">STW OFFICIAL DATA</span>
-                        <span class="bg-[#48bb78] text-white text-[9px] px-1.5 py-0.5 rounded uppercase font-bold">Verified</span>
-                    </div>
-                    <div class="p-6">
-                        <!-- ID displayed on Top -->
-                        <div class="mb-4">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">产品品号</p>
-                            <div id="res-id" class="text-2xl font-black text-blue-600 font-mono tracking-wider">-</div>
-                        </div>
-
-                        <div class="mb-6 border-t border-slate-50 pt-4">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">产品名称</p>
-                            <h2 id="res-name" class="text-2xl font-bold text-slate-800">-</h2>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                <p class="text-[9px] font-bold text-blue-400 uppercase mb-1">规格参数</p>
-                                <p id="res-spec" class="text-lg font-bold text-blue-900">-</p>
-                            </div>
-                            <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                                <p class="text-[9px] font-bold text-orange-400 uppercase mb-1">标准单价 (含税)</p>
-                                <p class="text-orange-600 font-black text-2xl">¥ <span id="res-price">-</span></p>
-                            </div>
-                        </div>
-
-                        <!-- 底部 Logo 区域（已固定为上传后的图样） -->
-                        <div class="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                            <!-- 模拟截图中的红色“上工”Logo -->
-                            <div class="fixed-logo-container">
-                                <svg viewBox="0 0 100 100" class="w-9 h-9">
-                                    <rect width="100" height="100" fill="white" />
-                                    <!-- 红色文字 Logo 模拟 -->
-                                    <text x="50%" y="45%" dominant-baseline="middle" text-anchor="middle" font-family="serif" font-weight="bold" font-size="28" fill="#e11d48">上☆工</text>
-                                    <text x="82%" y="78%" dominant-baseline="middle" text-anchor="middle" font-size="10" fill="#e11d48" font-weight="bold">®</text>
-                                    <rect x="10" y="10" width="80" height="80" rx="4" fill="none" stroke="#e11d48" stroke-width="1.5" />
-                                </svg>
-                            </div>
-                            <div class="flex-grow">
-                                <p class="text-[14px] font-bold text-slate-700">上海工具厂有限公司</p>
-                                <p class="text-[10px] text-slate-400 uppercase tracking-tight">Precision Cutting Tools Specialists</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <h1 class="text-2xl sm:text-3xl font-semibold text-slate-900 tracking-tight">
+          上海工具厂<br class="sm:hidden" />产品价格查询系统
+        </h1>
+        <p class="mt-1.5 text-sm text-slate-500 flex items-center gap-2">
+          <span id="status-text" class="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+            <span id="status-dot" class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+            <span id="status-label">正在连接数据中心...</span>
+          </span>
+        </p>
+      </div>
     </div>
 
-    <script>
-        let dbData = [];
-        let namesMap = {};
-        const CSV_PATH = '新价格本.csv';
+    <!-- 主卡片 -->
+    <div class="glass-card rounded-2xl p-4 sm:p-6 lg:p-8 animate-fade-in">
 
-        const statusEl = document.getElementById('status-text');
-        const importSection = document.getElementById('importSection');
-        const searchArea = document.getElementById('searchArea');
+      <!-- 导入提示区 -->
+      <div id="importSection" class="mb-6 sm:mb-8 hidden">
+        <div class="upload-zone rounded-xl px-4 py-4 sm:px-5 sm:py-5 bg-white/60 flex flex-col sm:flex-row sm:items-center gap-3 shadow-sm cursor-pointer">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500">
+              📁
+            </div>
+            <div>
+              <p class="text-sm font-medium text-slate-900">未检测到本地数据文件</p>
+              <p class="text-xs text-slate-500 mt-0.5">请点击选择《新价格本.csv》或拖拽到此处</p>
+            </div>
+          </div>
+          <div class="sm:ml-auto">
+            <label class="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium shadow-sm hover:bg-blue-700 cursor-pointer active:translate-y-[1px]">
+              <span class="text-sm leading-none">+</span>
+              <span>选择文件</span>
+              <input id="fileInput" type="file" accept=".csv" class="hidden" />
+            </label>
+          </div>
+        </div>
+      </div>
 
-        window.onload = function() {
-            fetch(CSV_PATH)
-                .then(res => { if(!res.ok) throw new Error(); return res.text(); })
-                .then(csv => {
-                    handleCsvData(csv);
-                    statusEl.textContent = "● 数据已就绪 (服务器文件)";
-                    statusEl.classList.replace('text-slate-400', 'text-green-500');
-                })
-                .catch(() => {
-                    statusEl.textContent = "● 请手动导入数据文件...";
-                    importSection.classList.remove('hidden');
-                });
-        };
+      <!-- 搜索区 -->
+      <div id="searchArea" class="space-y-6 sm:space-y-7 hidden">
+        <!-- 搜索方式 Tabs (视觉标签) -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/70 border border-slate-200/70 shadow-sm">
+            <span class="text-[11px] font-medium text-slate-700">品名模糊搜索</span>
+            <span class="text-[11px] text-slate-400">/ 9 位品号直接查询</span>
+          </div>
+          <button
+            onclick="window.location.reload()"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200/80 bg-white/60 text-[11px] font-medium text-slate-600 hover:bg-white active:translate-y-[1px]"
+          >
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            重新加载文件
+          </button>
+        </div>
 
-        // 数据导入逻辑
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                handleCsvData(event.target.result);
-                statusEl.textContent = "● 数据已就绪 (手动导入: " + file.name + ")";
-                statusEl.classList.replace('text-slate-400', 'text-blue-500');
-            };
-            reader.readAsText(file);
+        <div class="grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+          <!-- 左侧：品名搜索 -->
+          <div class="space-y-3 rounded-2xl border border-slate-200/70 bg-white/55 p-4 sm:p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-slate-700">
+                品名模糊搜索
+              </label>
+              <span class="text-[11px] text-slate-400">支持全量候选</span>
+            </div>
+            <div class="relative">
+              <input
+                id="nameSearch"
+                type="text"
+                placeholder="例如：麻花钻、丝锥、铰刀..."
+                class="w-full rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
+              />
+              <div class="absolute inset-y-0 right-3.5 flex items-center pointer-events-none">
+                <span class="text-[11px] text-slate-400 border border-slate-200 rounded-md px-1.5 py-0.5 bg-white/80">Ctrl + K</span>
+              </div>
+            </div>
+
+            <!-- 下拉的品名候选列表 -->
+            <div
+              id="nameResults"
+              class="mt-2 hidden max-h-56 overflow-auto rounded-xl border border-slate-200/80 bg-white shadow-xl text-sm divide-y divide-slate-100"
+            >
+              <!-- JS 动态插入 -->
+            </div>
+
+            <!-- 规格选择 -->
+            <div id="specContainer" class="mt-3 hidden space-y-2">
+              <label class="block text-xs font-medium text-slate-600">
+                选择具体规格
+              </label>
+              <select
+                id="specSelect"
+                class="w-full rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
+              >
+                <option value="">-- 请选择 --</option>
+              </select>
+
+              <div class="pt-1">
+                <label class="block text-[11px] font-medium text-slate-500 mb-1">
+                  或直接输入规格（支持模糊匹配）
+                </label>
+                <input
+                  id="specInput"
+                  type="text"
+                  placeholder="例如：Φ10×200，输入部分关键字即可"
+                  class="w-full rounded-xl border border-slate-200/90 bg-white px-3.5 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧：品号搜索 -->
+          <div class="space-y-3 rounded-2xl border border-slate-200/70 bg-white/55 p-4 sm:p-5 shadow-sm">
+            <label class="block text-xs font-semibold text-slate-700">
+              或输入 9 位品号
+            </label>
+            <input
+              id="idSearch"
+              type="text"
+              inputmode="numeric"
+              maxlength="9"
+              placeholder="例如：230100123"
+              class="w-full rounded-xl border border-slate-200/90 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 tracking-[0.08em]"
+            />
+            <p class="text-[11px] text-slate-400">
+              输入完整品号可直接跳过品名选择。
+            </p>
+          </div>
+        </div>
+
+        <!-- 结果展示卡片 -->
+        <div
+          id="resultCard"
+          class="mt-4 sm:mt-5 rounded-2xl border border-slate-200/70 bg-white/65 px-4 py-4 sm:px-5 sm:py-4 lg:px-6 lg:py-5 hidden shadow-sm"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div>
+              <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-2.5 py-1 border border-emerald-100 mb-2">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span class="text-[11px] font-semibold text-emerald-700 tracking-wide uppercase">
+                  STW OFFICIAL DATA
+                </span>
+                <span class="text-[10px] text-emerald-500">Verified</span>
+              </div>
+
+              <div class="space-y-1.5">
+                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  产品品号
+                </div>
+                <div id="res-id" class="text-base sm:text-lg font-semibold text-slate-900 tracking-[0.12em]">
+                  -
+                </div>
+              </div>
+
+              <div class="mt-3 space-y-1.5">
+                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  产品名称
+                </div>
+                <div id="res-name" class="text-sm sm:text-base font-medium text-slate-900">
+                  -
+                </div>
+              </div>
+
+              <div class="mt-3 space-y-1.5">
+                <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  规格参数
+                </div>
+                <div id="res-spec" class="text-sm text-slate-800">
+                  -
+                </div>
+              </div>
+            </div>
+
+            <div class="sm:text-right">
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1.5">
+                标准单价 (含税)
+              </div>
+              <div class="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900">
+                <span class="text-base align-top mr-1 text-slate-500">¥</span>
+                <span id="res-price" class="bg-gradient-to-r from-slate-900 via-slate-900 to-blue-700 bg-clip-text text-transparent">-</span>
+              </div>
+              <p class="mt-1 text-[11px] text-slate-400">
+                以《新价格本》最新版本为准。
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-4 border-t border-slate-200 pt-3 flex items-center justify-between text-[11px] text-slate-400">
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-500">上☆工</span>
+              <span class="text-[10px]">®</span>
+              <span class="mx-1">·</span>
+              <span>Shanghai Tool Works</span>
+            </div>
+            <div class="text-right">
+              <span class="block">上海工具厂有限公司</span>
+              <span class="block">Precision Cutting Tools Specialists</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 text-center text-[11px] text-slate-400">
+      <span class="inline-flex items-center gap-2">
+        <span class="w-1 h-1 rounded-full bg-slate-300"></span>
+        本地运行请用 <span class="font-mono text-slate-500">http://localhost:8000/index.html</span> 访问
+      </span>
+    </div>
+
+  </div>
+
+  <script>
+    let dbData = [];
+    let namesMap = {};
+    const CSV_PATH = '新价格本.csv';
+
+    const statusEl = document.getElementById('status-text');
+    const statusDot = document.getElementById('status-dot');
+    const statusLabel = document.getElementById('status-label');
+    const importSection = document.getElementById('importSection');
+    const searchArea = document.getElementById('searchArea');
+
+    function setStatus(text, tone) {
+      if (statusLabel) statusLabel.textContent = text;
+
+      statusEl.classList.remove('text-slate-500', 'text-slate-400', 'text-green-600', 'text-blue-600', 'text-amber-600');
+      statusDot?.classList.remove('bg-slate-300', 'bg-green-500', 'bg-blue-500', 'bg-amber-500');
+
+      if (tone === 'green') {
+        statusEl.classList.add('text-green-600');
+        statusDot?.classList.add('bg-green-500');
+      } else if (tone === 'blue') {
+        statusEl.classList.add('text-blue-600');
+        statusDot?.classList.add('bg-blue-500');
+      } else if (tone === 'amber') {
+        statusEl.classList.add('text-amber-600');
+        statusDot?.classList.add('bg-amber-500');
+      } else {
+        statusEl.classList.add('text-slate-500');
+        statusDot?.classList.add('bg-slate-300');
+      }
+    }
+
+    window.onload = function() {
+      fetch(CSV_PATH)
+        .then(res => { if(!res.ok) throw new Error(); return res.text(); })
+        .then(csv => {
+          handleCsvData(csv);
+          setStatus("数据已就绪（服务器文件）", 'green');
+        })
+        .catch(() => {
+          setStatus("请手动导入数据文件…", 'amber');
+          importSection.classList.remove('hidden');
         });
+    };
 
-        function handleCsvData(csvString) {
-            Papa.parse(csvString, {
-                header: true,
-                skipEmptyLines: true,
-                complete: function(results) {
-                    dbData = results.data;
-                    processData();
-                    importSection.classList.add('hidden');
-                    searchArea.classList.remove('hidden');
-                }
-            });
+    // 数据导入逻辑
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        handleCsvData(event.target.result);
+        setStatus("数据已就绪（手动导入：" + file.name + "）", 'blue');
+      };
+      reader.readAsText(file);
+    });
+
+    function handleCsvData(csvString) {
+      Papa.parse(csvString, {
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          dbData = results.data;
+          processData();
+          importSection.classList.add('hidden');
+          searchArea.classList.remove('hidden');
         }
+      });
+    }
 
-        function processData() {
-            namesMap = {};
-            dbData.forEach(item => {
-                const name = item['品名'];
-                if (name) {
-                    if (!namesMap[name]) namesMap[name] = [];
-                    namesMap[name].push(item);
-                }
-            });
+    function processData() {
+      namesMap = {};
+      dbData.forEach(item => {
+        const name = item['品名'];
+        if (name) {
+          if (!namesMap[name]) namesMap[name] = [];
+          namesMap[name].push(item);
         }
+      });
+    }
 
-        // 搜索逻辑
-        const nameInput = document.getElementById('nameSearch');
-        const nameResults = document.getElementById('nameResults');
-        const specSelect = document.getElementById('specSelect');
-        const specContainer = document.getElementById('specContainer');
+    // 搜索逻辑
+    const nameInput = document.getElementById('nameSearch');
+    const nameResults = document.getElementById('nameResults');
+    const specSelect = document.getElementById('specSelect');
+    const specContainer = document.getElementById('specContainer');
+    const specInput = document.getElementById('specInput');
+    let currentSpecList = null;
 
-        nameInput.addEventListener('input', (e) => {
-            const val = e.target.value.trim().toLowerCase();
-            if (!val) { nameResults.classList.add('hidden'); return; }
-            const matches = Object.keys(namesMap).filter(name => name.toLowerCase().includes(val)).slice(0, 10);
-            if (matches.length > 0) {
-                nameResults.innerHTML = matches.map(m => `<div class="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b last:border-0" onclick="selectName('${m}')">${m}</div>`).join('');
-                nameResults.classList.remove('hidden');
-            } else { nameResults.classList.add('hidden'); }
-        });
+    function extractNumbers(str) {
+      const s = String(str ?? '');
+      const m = s.match(/\d+(?:\.\d+)?/g);
+      return m ? m.map(n => Number(n)) : [];
+    }
 
-        window.selectName = (name) => {
-            nameInput.value = name;
-            nameResults.classList.add('hidden');
-            const list = namesMap[name];
-            specSelect.innerHTML = '<option value="">-- 点击选择规格 --</option>' + 
-                                  list.map((p, i) => `<option value="${i}">${p['规格']}</option>`).join('');
-            specContainer.classList.remove('hidden');
-            document.getElementById('resultCard').classList.add('hidden');
-        };
+    function compareNumberArrays(aNums, bNums) {
+      const len = Math.max(aNums.length, bNums.length);
+      for (let i = 0; i < len; i++) {
+        const av = aNums[i];
+        const bv = bNums[i];
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        if (av !== bv) return av - bv;
+      }
+      return 0;
+    }
 
-        specSelect.addEventListener('change', (e) => {
-            if(e.target.value !== "") show(namesMap[nameInput.value][e.target.value]);
-        });
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[c]));
+    }
 
-        document.getElementById('idSearch').addEventListener('input', (e) => {
-            const val = e.target.value.trim();
-            const p = dbData.find(i => String(i['品号']) === val);
-            if(p) show(p);
-        });
+    function escapeAttr(s) {
+      return escapeHtml(s);
+    }
 
-        function show(p) {
-            document.getElementById('res-name').textContent = p['品名'];
-            document.getElementById('res-spec').textContent = p['规格'];
-            document.getElementById('res-price').textContent = p['新价格'];
-            document.getElementById('res-id').textContent = p['品号'];
-            document.getElementById('resultCard').classList.remove('hidden');
-            document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    let nameRenderToken = 0;
+
+    function renderNameMatches(matches) {
+      const token = ++nameRenderToken;
+
+      nameResults.innerHTML = `
+        <div class="sticky top-0 z-10 px-3.5 py-2 text-[11px] text-slate-500 bg-white/95 backdrop-blur border-b border-slate-100">
+          共 <span class="font-semibold text-slate-700">${matches.length}</span> 条匹配
+        </div>
+      `;
+
+      const chunkSize = 120;
+      let i = 0;
+
+      const addChunk = () => {
+        if (token !== nameRenderToken) return;
+        const end = Math.min(i + chunkSize, matches.length);
+        let html = '';
+        for (; i < end; i++) {
+          const m = matches[i];
+          html += `
+            <button
+              type="button"
+              data-name="${escapeAttr(m)}"
+              class="w-full text-left px-3.5 py-2.5 text-sm hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+            >
+              <span class="font-medium text-slate-900">${escapeHtml(m)}</span>
+              <span class="ml-2 text-[11px] text-slate-400">点击选择</span>
+            </button>
+          `;
         }
-    </script>
+        nameResults.insertAdjacentHTML('beforeend', html);
+        if (i < matches.length) requestAnimationFrame(addChunk);
+      };
+
+      requestAnimationFrame(addChunk);
+    }
+
+    nameResults.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-name]');
+      if (!btn) return;
+      window.selectName(btn.dataset.name);
+    });
+
+    nameInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim().toLowerCase();
+      if (!val) { nameResults.classList.add('hidden'); nameRenderToken++; return; }
+      const matches = Object.keys(namesMap).filter(name => name.toLowerCase().includes(val));
+      if (matches.length > 0) {
+        renderNameMatches(matches);
+        nameResults.classList.remove('hidden');
+      } else { nameResults.classList.add('hidden'); }
+    });
+
+    window.selectName = (name) => {
+      nameInput.value = name;
+      nameResults.classList.add('hidden');
+      const rawList = namesMap[name] || [];
+      const list = [...rawList].sort((a, b) => {
+        const ak = extractNumbers(a['规格']);
+        const bk = extractNumbers(b['规格']);
+        const c = compareNumberArrays(ak, bk);
+        if (c !== 0) return c;
+        return String(a['规格'] ?? '').localeCompare(String(b['规格'] ?? ''), 'zh-CN');
+      });
+      currentSpecList = list;
+      specSelect.innerHTML = `
+        <option value="">-- 点击选择规格 --</option>
+        ${list.map((p, i) => `
+          <option value="${i}">${p['规格']}</option>
+        `).join('')}
+      `;
+      if (specInput) specInput.value = '';
+      specContainer.classList.remove('hidden');
+      document.getElementById('resultCard').classList.add('hidden');
+    };
+
+    specSelect.addEventListener('change', (e) => {
+      if (e.target.value === "") return;
+      const idx = Number(e.target.value);
+      const list = currentSpecList || (namesMap[nameInput.value] || []);
+      if (Number.isFinite(idx) && list[idx]) show(list[idx]);
+    });
+
+    if (specInput) {
+      specInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if (!val) return;
+        const name = nameInput.value;
+        if (!name || !namesMap[name]) return;
+        const list = currentSpecList || (namesMap[name] || []);
+        const p = list.find(item => String(item['规格'] || '').includes(val));
+        if (p) show(p);
+      });
+    }
+
+    document.getElementById('idSearch').addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      const p = dbData.find(i => String(i['品号']) === val);
+      if(p) show(p);
+    });
+
+    function show(p) {
+      document.getElementById('res-name').textContent = p['品名'];
+      document.getElementById('res-spec').textContent = p['规格'];
+      document.getElementById('res-price').textContent = p['新价格'];
+      document.getElementById('res-id').textContent = p['品号'];
+      document.getElementById('resultCard').classList.remove('hidden');
+      document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  </script>
 </body>
 </html>
